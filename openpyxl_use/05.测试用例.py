@@ -7,7 +7,7 @@
 import openpyxl
 from datetime import datetime
 
-from openpyxl.styles import Alignment
+from openpyxl.styles import Alignment, Font
 
 """
 B2-Q13：第一个表格区域
@@ -50,12 +50,15 @@ class ExcelCreater(object):
 
     def set_value(self, cell_name=None, row=None, column=None, value=None):
         align = Alignment(horizontal='center', vertical='center')
+        font = Font(size=10)
         if cell_name is not None:
             self.ws[cell_name] = value
             self.ws[cell_name].alignment = align
+            self.ws[cell_name].font = font
         elif isinstance(row, int) and isinstance(column, int):
             self.ws.cell(row=row, column=column, value=value)
             self.ws.cell(row=row, column=column).alignment = align
+            self.ws.cell(row=row, column=column).font = font
         else:
             return False
         return True
@@ -70,13 +73,31 @@ class ExcelCreater(object):
             return False
         return True
 
+    def adjust_column(self):
+        dims = {}
+        for row in self.ws.rows:
+            for cell in row:
+                if cell.value:
+                    calc_len = 0
+                    z_count = 0
+                    for c in str(cell.value):
+                        if c.isalpha():
+                            z_count += 1
+                        else:
+                            calc_len += 1
+                    calc_len += int(z_count * 35 / 19)
+                    dims[cell.column] = max((dims.get(cell.column, 0), calc_len + 4))
+        for col, value in dims.items():
+            self.ws.column_dimensions[col].width = value
+
     def save(self):
         file_name = "%s.%s" % (self.file_name, self.suffix)
         self.wb.save(filename=file_name)
 
 
 if __name__ == '__main__':
-    c_chr = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"]
+    c_chr = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U",
+             "V", "W", "X", "Y", "Z"]
     date_now = datetime.now().date()
     title = date_now.strftime("%Y-%m-%d")
     excel = ExcelCreater(file_name=title)  # 设置
@@ -114,7 +135,7 @@ if __name__ == '__main__':
     for k, v in set_value_dict.items():
         excel.set_value(cell_name=k, value=v)
 
-    enterprise_datas = [        # TODO 需要动态更换的数据源
+    enterprise_datas = [  # TODO 需要动态更换的数据源
         {
             "enterprise_name": "北京中诺口腔医院",
             "apply_piece": 1,
@@ -212,13 +233,13 @@ if __name__ == '__main__':
         r += 1
         c = 4
 
-    excel.merge_cells(range_string="B4:B%d" % (4 + len(enterprise_datas) -1))
+    excel.merge_cells(range_string="B4:B%d" % (4 + len(enterprise_datas) - 1))
     excel.set_value(cell_name="B4", value="大众版")
 
-    excel.merge_cells(range_string="C4:C%d" % (4 + len(enterprise_datas) -1))
+    excel.merge_cells(range_string="C4:C%d" % (4 + len(enterprise_datas) - 1))
     excel.set_value(cell_name="C4", value="金服侠")
 
-    c = 2   # B
+    c = 2  # B
     # 大众版小计
     excel.merge_cells(range_string="B%d:D%d" % (r, r))
     excel.set_value(cell_name="B%d" % r, value="大众版小计")
@@ -230,7 +251,7 @@ if __name__ == '__main__':
     # 大众版平均通过率
     excel.set_value(cell_name="G%d" % r, value="=F%d/E%d" % (r, r))
     # 大众版申请金额求和
-    excel.set_value(cell_name="H%d" % r, value="=SUM(H4:H%d)" % (r -1))
+    excel.set_value(cell_name="H%d" % r, value="=SUM(H4:H%d)" % (r - 1))
     # 大众版通过金额求和
     excel.set_value(cell_name="I%d" % r, value="==SUM(I4:I%d)" % (r - 1))
     # 大众版平均免面签率
@@ -239,5 +260,9 @@ if __name__ == '__main__':
     excel.set_value(cell_name="K%d" % r, value="=SUM(K4:K%d)" % (r - 1))
     # 大众版企业是否首次进件
     excel.set_value(cell_name="L%d" % r, value="")
+    excel.set_value(cell_name="D11", value="00000000000000000000000000000000")
+
+    # 调整宽度
+    excel.adjust_column()
 
     excel.save()
